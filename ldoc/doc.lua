@@ -11,6 +11,7 @@ local doc = {}
 local global = require 'ldoc.builtin.globals'
 local tools = require 'ldoc.tools'
 local split_dotted_name = tools.split_dotted_name
+local split_module_field = tools.split_module_field
 
 local TAG_MULTI,TAG_ID,TAG_SINGLE,TAG_TYPE,TAG_FLAG,TAG_MULTI_LINE = 'M','id','S','T','N','ML'
 
@@ -306,7 +307,7 @@ function File:finish()
             if item.name == nil then
                self:error("item's name is nil")
             end
-            local mod,fname = split_dotted_name(item.name)
+            local mod,fname = split_module_field(item.name)
             -- warning for inferred unqualified names in new style modules
             -- (retired until we handle methods like Set:unset() properly)
             if not mod and not this_mod.old_style and item.inferred then
@@ -358,8 +359,6 @@ function File:finish()
                            item.tags.within = init_within_section(this_mod,inferred_section)
                         end
                      end
-                     -- Whether to use '.' or the language's version of ':' (e.g. \ for Moonscript)
-                     item.name = class..(not static and this_mod.file.lang.method_call or '.')..item.name
                   end
                   if stype == 'factory'  then
                      if item.tags.private then to_be_removed = true

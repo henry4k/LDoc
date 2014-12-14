@@ -166,6 +166,15 @@ function M.split_dotted_name (s)
 --~    end
 end
 
+function M.split_module_field(s)
+   local s1,s2 = s:match '^([^%.:]+)[%.:](.+)$'
+   if s1 then -- we can split
+      return s1,s2
+   else
+      return nil
+   end
+end
+
 -- grab lines from a line iterator `iter` until the line matches the pattern.
 -- Returns the joined lines and the line, which may be nil if we run out of
 -- lines.
