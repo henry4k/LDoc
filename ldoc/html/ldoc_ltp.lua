@@ -65,8 +65,8 @@ return [==[
 # for kind, mods, type in ldoc.kinds() do
 #  if ldoc.allowed_in_contents(type,module) then
 <h2>$(kind)</h2>
-<ul class="$(kind=='Topics' and '' or 'nowrap'">
-#  for mod in mods() do local name = ldoc.module_name(mod)
+<ul class="$(kind=='Topics' and '' or 'nowrap')">
+#  for mod in mods() do local name = display_name(mod)
 #   if mod.name == this_mod then
   <li><strong>$(name)</strong></li>
 #   else
@@ -90,6 +90,15 @@ return [==[
 #   if module.tags.include then
         $(M(ldoc.include_file(module.tags.include)))
 #   end
+#   if module.see then
+#     local li,il = use_li(module.see)
+    <h3>See also:</h3>
+    <ul>
+#     for see in iter(module.see) do
+         $(li)<a href="$(ldoc.href(see))">$(see.label)</a>$(il)
+#    end -- for
+    </ul>
+#   end -- if see
 #   if module.usage then
 #     local li,il = use_li(module.usage)
     <h3>Usage:</h3>
@@ -134,10 +143,15 @@ return [==[
 # local show_parms = show_return
 # for kind, items in module.kinds() do
 #   local kitem = module.kinds:get_item(kind)
-    <h2><a name="$(no_spaces(kind))"></a>$(kind)</h2>
+#   local has_description = kitem and ldoc.descript(kitem) ~= ""
+    <h2 class="section-header $(has_description and 'has-description')"><a name="$(no_spaces(kind))"></a>$(kind)</h2>
     $(M(module.kinds:get_section_description(kind),nil))
 #   if kitem then
-        $(M(ldoc.descript(kitem),kitem))
+#       if has_description then
+          <div class="section-description">
+          $(M(ldoc.descript(kitem),kitem))
+          </div>
+#       end
 #       if kitem.usage then
             <h3>Usage:</h3>
             <pre class="example">$(ldoc.prettify(kitem.usage[1]))</pre>
@@ -148,7 +162,7 @@ return [==[
     <dt>
     <a name = "$(item.name)"></a>
     <strong>$(display_name(item))</strong>
-#   if ldoc.prettify_files then
+#   if ldoc.prettify_files and ldoc.is_file_prettified[item.module.file.filename] then
     <a style="float:right;" href="$(ldoc.source_ref(item))">line $(item.lineno)</a>
 #  end
     </dt>

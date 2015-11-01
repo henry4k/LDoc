@@ -61,6 +61,7 @@ ldoc, a documentation generator for Lua, vs 1.4.3
   -M,--merge allow module merging
   -S,--simple no return or params, no summary
   -O,--one one-column output layout
+  --date (default system) use this date in generated doc
   --dump                debug output dump
   --filter (default none) filter output as Lua data (e.g pl.pretty.dump)
   --tags (default none) show all references to given tags, comma-separated
@@ -233,7 +234,8 @@ local ldoc_contents = {
    'no_return_or_parms','no_summary','full_description','backtick_references', 'custom_see_handler',
    'no_space_before_args','parse_extra','no_lua_ref','sort_modules','use_markdown_titles',
    'unqualified', 'custom_display_name_handler', 'kind_names', 'custom_references',
-   'dont_escape_underscore','global_lookup','prettify_files','convert_opt'
+   'dont_escape_underscore','global_lookup','prettify_files','convert_opt', 'user_keywords',
+   'postprocess_html',
 }
 ldoc_contents = tablex.makeset(ldoc_contents)
 
@@ -504,7 +506,7 @@ end
 -- (this also will initialize the code prettifier used)
 override ('format','plain')
 override 'pretty'
-ldoc.markup = markup.create(ldoc, args.format,args.pretty)
+ldoc.markup = markup.create(ldoc, args.format, args.pretty, ldoc.user_keywords)
 
 ------ 'Special' Project-level entities ---------------------------------------
 -- Examples and Topics do not contain code to be processed for doc comments.
@@ -556,6 +558,8 @@ if type(ldoc.examples) == 'table' then
    prettify_source_files(ldoc.examples,"example")
 end
 
+ldoc.is_file_prettified = {}
+
 if ldoc.prettify_files then
    local files = List()
    local linemap = {}
@@ -568,6 +572,23 @@ if ldoc.prettify_files then
       end
       linemap[F.filename] = ls
    end
+
+   if type(ldoc.prettify_files) == 'table' then
+      files = tools.expand_file_list(ldoc.prettify_files, '*.*')
+   elseif type(ldoc.prettify_files) == 'string' then
+      -- the gotcha is that if the person has a folder called 'show', only the contents
+      -- of that directory will be converted.  So, we warn of this amibiguity
+      if ldoc.prettify_files == 'show' then
+         -- just fall through with all module files collected above
+         if path.exists 'show' then
+            print("Notice: if you only want to prettify files in `show`, then set prettify_files to `show/`")
+         end
+      else
+         files = tools.expand_file_list({ldoc.prettify_files}, '*.*')
+      end
+   end
+
+   ldoc.is_file_prettified = tablex.makeset(files)
    prettify_source_files(files,"file",linemap)
 end
 
@@ -753,7 +774,7 @@ if builtin_style or builtin_template then
    local function tmpwrite (name)
       local ok,text = pcall(require,'ldoc.html.'..name:gsub('%.','_'))
       if not ok then
-         quit("cannot find builtin template "..name)
+         quit("cannot find builtin template "..name.." ("..text..")")
       end
       if not utils.writefile(path.join(tmpdir,name),text) then
          quit("cannot write to temp directory "..tmpdir)
@@ -781,7 +802,12 @@ ldoc.modules = module_list
 ldoc.title = ldoc.title or args.title
 ldoc.project = ldoc.project or args.project
 ldoc.package = args.package:match '%a+' and args.package or nil
-ldoc.updatetime = os.date("%Y-%m-%d %H:%M:%S")
+
+if args.date == 'system' then
+   ldoc.updatetime = os.date("%Y-%m-%d %H:%M:%S")
+else
+   ldoc.updatetime = args.date
+end
 
 local html = require 'ldoc.html'
 
